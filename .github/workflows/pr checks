@@ -1,0 +1,56 @@
+name: PR Checks
+
+on:
+pull_request:
+branches:
+- main
+
+jobs:
+file-size-check:
+name: Check file sizes
+runs-on: ubuntu-latest
+steps:
+- name: Check out code
+uses: actions/checkout@v4
+
+  - name: Fail if any file exceeds 1 MB
+    run: |
+      oversized_files=$(find . -type f -not -path './.git/*' -size +1M)
+
+      if [ -n "$oversized_files" ]; then
+        echo "The following files are larger than 1 MB:"
+        echo "$oversized_files"
+        exit 1
+      fi
+
+      echo "All files are within the 1 MB limit."
+
+branch-name-check:
+name: Check branch name
+runs-on: ubuntu-latest
+steps:
+- name: Validate branch name
+env:
+BRANCH_NAME: ${{ github.head_ref }}
+run: |
+if [[ ! "$BRANCH_NAME" =~ ^(feature|fix|docs)/.+$ ]]; then
+echo "Invalid branch name: $BRANCH_NAME"
+echo "Branch names must follow feature/, fix/, or docs/*."
+exit 1
+fi
+
+      echo "Branch name is valid: $BRANCH_NAME"
+
+pr-body-check:
+name: Check PR description
+runs-on: ubuntu-latest
+steps:
+- name: Warn if PR description is empty
+env:
+PR_BODY: ${{ github.event.pull_request.body }}
+run: |
+if [ -z "${PR_BODY//[[:space:]]/}" ]; then
+echo "::warning::PR description is empty."
+else
+echo "PR description is present."
+fi
